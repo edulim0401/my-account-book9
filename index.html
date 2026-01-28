@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>잘살아보세 가계부 2026 - Pro Sync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&display=swap');
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; letter-spacing: -0.025em; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 1.5rem; border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03); }
+        .nav-btn { transition: all 0.2s ease; position: relative; cursor: pointer; }
+        .nav-btn.active { color: #2563eb; background: #eff6ff; }
+        .nav-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); width: 16px; height: 4px; background: #2563eb; border-radius: 2px; }
+        .input-focus:focus { outline: none; border-color: #3b82f6; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Ensure buttons are clickable */
+        button { cursor: pointer; touch-action: manipulation; }
+        #loginBtn { z-index: 50; position: relative; }
+    </style>
+</head>
+<body class="antialiased min-h-screen pb-10">
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+                    <span class="p-2 bg-blue-600 rounded-2xl shadow-lg">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </span>
+                    잘살아보세 2026 <span class="text-blue-600">Pro</span>
+                </h1>
+                <div class="flex items-center gap-2 mt-2">
+                    <span id="authStatusIndicator" class="w-2 h-2 rounded-full bg-slate-300"></span>
+                    <p id="authStatusText" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">연결 대기 중...</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div id="userInfo" class="hidden flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+                    <img id="userPhoto" class="w-6 h-6 rounded-full border border-slate-100" src="" alt="">
+                    <span id="userName" class="text-xs font-bold text-slate-700"></span>
+                </div>
+                <button id="loginBtn" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-slate-50 transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Google 로그인
+                </button>
+                <button id="logoutBtn" class="hidden bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-200">로그아웃</button>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <div class="flex justify-center mb-8">
+            <nav class="glass-card p-1 flex gap-1 bg-white/50 border-slate-200">
+                <button onclick="window.switchTab('home')" id="navHome" class="nav-btn active px-5 py-2 rounded-xl text-sm font-bold text-slate-600">대시보드</button>
+                <button onclick="window.switchTab('list')" id="navList" class="nav-btn px-5 py-2 rounded-xl text-sm font-bold text-slate-600">전체내역</button>
+                <button onclick="window.switchTab('stats')" id="navStats" class="nav-btn px-5 py-2 rounded-xl text-sm font-bold text-slate-600">통계/분석</button>
+            </nav>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+            <div class="glass-card p-6 border-l-8 border-l-emerald-500">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">총 수입</p>
+                <h2 id="totalIncome" class="text-2xl font-black text-slate-800 tracking-tight">0원</h2>
+            </div>
+            <div class="glass-card p-6 border-l-8 border-l-rose-500">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">총 지출</p>
+                <h2 id="totalExpense" class="text-2xl font-black text-slate-800 tracking-tight">0원</h2>
+            </div>
+            <div class="glass-card p-6 border-l-8 border-l-blue-600 bg-blue-600 text-white shadow-blue-200 shadow-xl">
+                <p class="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">현재 잔액</p>
+                <h2 id="balance" class="text-2xl font-black tracking-tight">0원</h2>
+            </div>
+        </div>
+
+        <main>
+            <!-- Dashboard View -->
+            <div id="homeView" class="tab-content active space-y-8">
+                <section class="glass-card p-8">
+                    <h3 class="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><span>✍️</span> 가계부 작성</h3>
+                    <form id="recordForm" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black text-slate-400 ml-1">1. 구분</label>
+                            <select id="type" class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 input-focus text-sm font-bold">
+                                <option value="수입">수입 (+)</option>
+                                <option value="유동비">유동비 (-)</option>
+                                <option value="고정비">고정비 (-)</option>
+                                <option value="투자/저축">투자/저축</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black text-slate-400 ml-1">2. 일자</label>
+                            <input type="date" id="date" class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 input-focus text-sm font-bold" required>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black text-slate-400 ml-1">3. 범주</label>
+                            <select id="category" class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 input-focus text-sm font-bold">
+                                <option value="식비">식비</option>
+                                <option value="교통비">교통비</option>
+                                <option value="급여">급여</option>
+                                <option value="쇼핑/편의점">쇼핑/편의점</option>
+                                <option value="취미/문화">취미/문화</option>
+                                <option value="주거/통신">주거/통신</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black text-slate-400 ml-1">4. 내역</label>
+                            <input type="text" id="detail" class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 input-focus text-sm font-bold" placeholder="내용 입력" required>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black text-slate-400 ml-1">5. 금액</label>
+                            <input type="number" id="amount" class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 input-focus text-sm font-bold" placeholder="0" required>
+                        </div>
+                        <div class="md:col-span-5 mt-2">
+                            <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg disabled:opacity-50 transition-all">
+                                <span id="btnText">로그인 중...</span>
+                            </button>
+                        </div>
+                    </form>
+                </section>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <section class="glass-card p-6"><h3 class="text-sm font-black text-emerald-600 mb-4 uppercase tracking-tighter">최근 수입</h3><div id="incomeSummaryList" class="space-y-2"></div></section>
+                    <section class="glass-card p-6"><h3 class="text-sm font-black text-rose-600 mb-4 uppercase tracking-tighter">최근 지출</h3><div id="expenseSummaryList" class="space-y-2"></div></section>
+                </div>
+            </div>
+
+            <!-- List View -->
+            <div id="listView" class="tab-content space-y-6">
+                <div class="glass-card p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <h2 class="text-xl font-black text-slate-800">모든 거래 기록</h2>
+                    <button onclick="window.exportCSV()" class="bg-slate-800 text-white px-5 py-2 rounded-xl text-xs font-bold">CSV로 내보내기</button>
+                </div>
+                <div class="glass-card overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50/50">
+                                <tr>
+                                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase">구분</th>
+                                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase">일자</th>
+                                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase">범주</th>
+                                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase">내역</th>
+                                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase text-right">금액</th>
+                                    <th class="p-4 text-[10px] font-black text-slate-400 uppercase text-center">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allRecordsTable" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics View -->
+            <div id="statsView" class="tab-content space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-card p-8">
+                        <h3 class="text-lg font-black text-slate-800 mb-8">지출 카테고리 분석</h3>
+                        <div class="h-[320px]"><canvas id="expenseChart"></canvas></div>
+                    </div>
+                    <div class="glass-card p-8 flex flex-col justify-center items-center text-center">
+                        <div class="p-4 bg-slate-50 rounded-full mb-4">
+                            <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <h4 id="statCount" class="text-6xl font-black text-slate-800 tracking-tighter">0</h4>
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-10 tracking-widest">누적 기록 수</p>
+                        <button onclick="window.resetAllData()" class="w-full bg-rose-50 text-rose-600 border border-rose-100 font-bold py-4 rounded-2xl hover:bg-rose-100 transition-colors">데이터 전체 초기화</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-3xl opacity-0 transition-all duration-300 font-bold text-sm z-50 pointer-events-none shadow-2xl"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Init ---
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : "well-live-2026-pro";
+
+        let records = [];
+        let currentUser = null;
+        let expenseChart = null;
+        let unsubscribe = null;
+
+        // --- Auth Management ---
+
+        const updateAuthUI = (user) => {
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userInfo = document.getElementById('userInfo');
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const statusIndicator = document.getElementById('authStatusIndicator');
+            const statusText = document.getElementById('authStatusText');
+
+            if (user) {
+                currentUser = user;
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                userInfo.classList.remove('hidden');
+                document.getElementById('userName').textContent = user.displayName || '가족 구성원';
+                document.getElementById('userPhoto').src = user.photoURL || 'https://ui-avatars.com/api/?name=User';
+                
+                statusIndicator.className = "w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
+                statusText.textContent = user.isAnonymous ? "기기 저장 모드" : "클라우드 동기화 중";
+                
+                submitBtn.disabled = false;
+                btnText.textContent = "기록 저장하기";
+                setupRealtimeSync();
+            } else {
+                currentUser = null;
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                userInfo.classList.add('hidden');
+                
+                statusIndicator.className = "w-2 h-2 rounded-full bg-slate-300";
+                statusText.textContent = "연결 끊김";
+                
+                submitBtn.disabled = true;
+                btnText.textContent = "로그인 후 작성 가능";
+                
+                records = [];
+                updateUI();
+                if (unsubscribe) unsubscribe();
+            }
+        };
+
+        const handleLogin = async () => {
+            const provider = new GoogleAuthProvider();
+            showToast("Google 로그인 시도 중...");
+            try {
+                // Try Popup first (Desktop/Standard Browsers)
+                await signInWithPopup(auth, provider);
+            } catch (err) {
+                console.warn("Popup blocked, trying redirect...", err);
+                try {
+                    // Fallback to Redirect (Mobile / Security restricted environments)
+                    await signInWithRedirect(auth, provider);
+                } catch (e) {
+                    showToast("로그인 오류: 팝업을 허용해주세요.");
+                }
+            }
+        };
+
+        const handleLogout = async () => {
+            if (confirm("로그아웃 하시겠습니까?")) {
+                await signOut(auth);
+                showToast("안전하게 로그아웃되었습니다.");
+            }
+        };
+
+        // Initialize Authentication
+        const initAuth = async () => {
+            // Check for redirect result first
+            try { await getRedirectResult(auth); } catch (e) {}
+
+            // Auth Priority: Custom -> Anonymous
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
+            } else if (!auth.currentUser) {
+                await signInAnonymously(auth);
+            }
+        };
+
+        onAuthStateChanged(auth, updateAuthUI);
+        document.getElementById('loginBtn').addEventListener('click', handleLogin);
+        document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+        // --- Data Logic ---
+
+        function setupRealtimeSync() {
+            if (!currentUser) return;
+            if (unsubscribe) unsubscribe();
+
+            const colRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'records');
+            unsubscribe = onSnapshot(colRef, (snapshot) => {
+                records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                records.sort((a, b) => (new Date(b.date) - new Date(a.date)) || (b.createdAt - a.createdAt));
+                updateUI();
+            }, (err) => {
+                console.error(err);
+                showToast("데이터를 불러올 수 없습니다.");
+            });
+        }
+
+        function updateUI() {
+            let income = 0; let expense = 0;
+            records.forEach(r => {
+                const amt = Number(r.amount) || 0;
+                if (r.type === '수입') income += amt; else expense += amt;
+            });
+            
+            document.getElementById('totalIncome').textContent = income.toLocaleString() + '원';
+            document.getElementById('totalExpense').textContent = expense.toLocaleString() + '원';
+            document.getElementById('balance').textContent = (income - expense).toLocaleString() + '원';
+            document.getElementById('statCount').textContent = records.length;
+
+            renderDashboard();
+            renderList();
+            if (document.getElementById('statsView').classList.contains('active')) renderChart();
+        }
+
+        function renderDashboard() {
+            const incList = document.getElementById('incomeSummaryList');
+            const expList = document.getElementById('expenseSummaryList');
+            
+            const incs = records.filter(r => r.type === '수입').slice(0, 5);
+            const exps = records.filter(r => r.type !== '수입').slice(0, 5);
+            
+            const row = (r, isInc) => `
+                <div class="flex justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm items-center">
+                    <div>
+                        <p class="font-bold text-sm text-slate-700">${r.detail}</p>
+                        <p class="text-[10px] text-slate-300 font-medium">${r.date} · ${r.category}</p>
+                    </div>
+                    <p class="font-black text-base ${isInc ? 'text-emerald-500' : 'text-slate-800'}">
+                        ${isInc ? '+' : '-'}${Number(r.amount).toLocaleString()}
+                    </p>
+                </div>`;
+            
+            incList.innerHTML = incs.map(r => row(r, true)).join('') || '<p class="text-center py-6 text-slate-300 text-xs font-bold uppercase">내역 없음</p>';
+            expList.innerHTML = exps.map(r => row(r, false)).join('') || '<p class="text-center py-6 text-slate-300 text-xs font-bold uppercase">내역 없음</p>';
+        }
+
+        function renderList() {
+            document.getElementById('allRecordsTable').innerHTML = records.map(r => `
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="p-4"><span class="px-2 py-1 rounded-lg text-[10px] font-black ${r.type === '수입' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}">${r.type}</span></td>
+                    <td class="p-4 text-xs font-bold text-slate-400">${r.date}</td>
+                    <td class="p-4 text-xs font-bold text-slate-600">${r.category}</td>
+                    <td class="p-4 text-xs font-black text-slate-800">${r.detail}</td>
+                    <td class="p-4 text-right font-black text-slate-900 text-sm">${Number(r.amount).toLocaleString()}원</td>
+                    <td class="p-4 text-center">
+                        <button onclick="window.deleteRecord('${r.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-rose-50 text-rose-400 transition-colors mx-auto">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function renderChart() {
+            const canvas = document.getElementById('expenseChart');
+            const expenses = records.filter(r => r.type !== '수입');
+            const catMap = {};
+            expenses.forEach(r => catMap[r.category] = (catMap[r.category] || 0) + Number(r.amount));
+            
+            if (expenseChart) expenseChart.destroy();
+            if (Object.keys(catMap).length === 0) return;
+
+            expenseChart = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(catMap),
+                    datasets: [{ data: Object.values(catMap), backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderRadius: 10, spacing: 5 }]
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { weight: 'bold' } } } }, cutout: '70%' }
+            });
+        }
+
+        // --- Interaction ---
+
+        document.getElementById('recordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return showToast("로그인이 필요합니다.");
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+
+            const data = {
+                type: document.getElementById('type').value,
+                date: document.getElementById('date').value,
+                category: document.getElementById('category').value,
+                detail: document.getElementById('detail').value,
+                amount: Number(document.getElementById('amount').value),
+                createdAt: Date.now()
+            };
+
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'records'), data);
+                e.target.reset();
+                document.getElementById('date').valueAsDate = new Date();
+                showToast("저장 완료! 💸");
+            } catch (err) {
+                showToast("저장 실패");
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        window.deleteRecord = async (id) => {
+            if (!currentUser || !confirm("삭제하시겠습니까?")) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'records', id));
+            showToast("삭제되었습니다.");
+        };
+
+        window.exportCSV = () => {
+            if (records.length === 0) return;
+            const csv = "구분,일자,범주,내역,금액\n" + records.map(r => `${r.type},${r.date},${r.category},${r.detail},${r.amount}`).join('\n');
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: 'text/csv' }));
+            link.download = `가계부_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click();
+        };
+
+        window.resetAllData = async () => {
+            if (!currentUser || !confirm("모든 데이터를 영구적으로 초기화할까요?")) return;
+            const snapshot = await getDocs(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'records'));
+            const batch = writeBatch(db);
+            snapshot.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            showToast("초기화 완료");
+        };
+
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tab + 'View').classList.add('active');
+            document.getElementById('nav' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+            if (tab === 'stats') setTimeout(renderChart, 100);
+        };
+
+        function showToast(m) { 
+            const t = document.getElementById('toast'); 
+            t.textContent = m; t.style.opacity = '1'; 
+            setTimeout(() => t.style.opacity = '0', 3000); 
+        }
+
+        document.getElementById('date').valueAsDate = new Date();
+        initAuth();
+    </script>
+</body>
+</html>
